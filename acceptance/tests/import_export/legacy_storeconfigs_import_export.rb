@@ -31,9 +31,13 @@ test_name "storeconfigs export and import" do
         'dblocation' => db_path,
         'storeconfigs_backend' => 'active_record',
         'debug' => 'true',
-        'manifest' => manifest_path,
         'autosign' => 'true'
-      }} do
+      },
+      'main' => {
+        'environmentpath' => manifest_path,
+      }
+    } do
+      bounce_service( master, master['puppetservice'], 10 )
       hosts.each do |host|
         run_agent_on host, "--test --server #{master}", :acceptable_exit_codes => [0,2]
       end

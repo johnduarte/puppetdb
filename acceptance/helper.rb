@@ -237,7 +237,7 @@ module PuppetDBExtensions
     # Hit an actual endpoint to ensure PuppetDB is up and not just the webserver.
     # Retry until an HTTP response code of 200 is received.
     curl_with_retries("start puppetdb", host,
-                      "-s -w '%{http_code}' http://localhost:8080/v3/version -o /dev/null",
+                      "-s -w '%{http_code}' http://#{host.node_name}:8080/v3/version -o /dev/null",
                       0, 120, 1, /200/)
     curl_with_retries("start puppetdb (ssl)", host,
                       "https://#{host.node_name}:8081/", [35, 60])
@@ -521,7 +521,7 @@ module PuppetDBExtensions
     begin
       Timeout.timeout(timeout) do
         until queue_size == 0
-          result = on host, %Q(curl http://localhost:8080/v3/metrics/mbean/#{CGI.escape(metric)} 2> /dev/null |awk -F"," '{for (i = 1; i <= NF; i++) { print $i } }' |grep QueueSize |awk -F ":" '{ print $2 }')
+          result = on host, %Q(curl http://#{host.node_name}:8080/v3/metrics/mbean/#{CGI.escape(metric)} 2> /dev/null |awk -F"," '{for (i = 1; i <= NF; i++) { print $i } }' |grep QueueSize |awk -F ":" '{ print $2 }')
           queue_size = Integer(result.stdout.chomp)
         end
       end
@@ -998,10 +998,27 @@ EOS
   end
 
   def create_remote_site_pp(host, manifest)
-    tmpdir = host.tmpdir("remote-site-pp")
-    remote_path = File.join(tmpdir, 'site.pp')
-    create_remote_file(host, remote_path, manifest)
-    on master, "chmod -R +rX #{tmpdir}"
+    testdir = host.tmpdir("remote-site-pp")
+    manifest_file = "#{testdir}/environments/production/manifests/site.pp"
+    apply_manifest_on(host, <<-PP)
+    File {
+      ensure => directory,
+      mode => "0750",
+      owner => #{master.puppet['user']},
+      group => #{master.puppet['group']},
+    }
+
+    file {
+      '#{testdir}':;
+      '#{testdir}/environments':;
+      '#{testdir}/environments/production':;
+      '#{testdir}/environments/production/manifests':;
+    }
+PP
+    create_remote_file(host, manifest_file, manifest)
+    remote_path = "#{testdir}/environments"
+    on host, "chmod -R +rX #{testdir}"
+    on host, "chown -R #{master.puppet['user']}:#{master.puppet['user']} #{testdir}"
     remote_path
   end
 

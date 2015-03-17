@@ -31,8 +31,8 @@ node "#{name}" {
       PIECE
     end.join("\n")
 
-    manifest_file_export = File.join(tmpdir, 'site-export.pp')
-    create_remote_file(master, manifest_file_export, manifest_export)
+#    manifest_file_export = File.join(tmpdir, 'site-export.pp')
+#    create_remote_file(master, manifest_file_export, manifest_export)
 
     manifest_collect = names.map do |name|
       <<-PIECE
@@ -43,18 +43,21 @@ node "#{name}" {
       PIECE
     end.join("\n")
 
-    manifest_file_collect = File.join(tmpdir, 'site-collect.pp')
-    create_remote_file(master, manifest_file_collect, manifest_collect)
+    manifest_file_collect = create_remote_site_pp(master, manifest_collect)
 
-    on master, "chmod -R +rX #{tmpdir}"
   end
 
   step "Run agent with collection and puppetdb stopped making sure it fails" do
     with_puppet_running_on master, {
       'master' => {
         'autosign' => 'true',
-        'manifest' => manifest_file_collect,
-      }} do
+      },
+      'main' => {
+        'environmentpath' => manifest_file_collect,
+      }
+    } do
+
+    bounce_service( master, master['puppetservice'], 10 )
 
       stop_puppetdb(database)
 
@@ -64,20 +67,23 @@ node "#{name}" {
     end
   end
 
-  step "Run agent with no collection and puppetdb stopped making sure it completes" do
-    with_puppet_running_on master, {
-      'master' => {
-        'autosign' => 'true',
-        'manifest' => manifest_file_export,
-      }} do
+  #step "Run agent with no collection and puppetdb stopped making sure it completes" do
+  #  with_puppet_running_on master, {
+  #    'master' => {
+  #      'autosign' => 'true',
+  #    },
+  #    'main' => {
+  #      'environmentpath' => manifest_file_export,
+  #    }
+  #  } do
 
-      stop_puppetdb(database)
+  #    stop_puppetdb(database)
 
-      on hosts, 'puppet master --configprint storeconfigs'
+  #    on hosts, 'puppet master --configprint storeconfigs'
 
-      run_agent_on hosts, "--test --verbose --trace --server #{master}"
+  #    run_agent_on hosts, "--test --verbose --trace --server #{master}"
 
-      start_puppetdb(database)
-    end
-  end
+  #    start_puppetdb(database)
+  #  end
+  #end
 end
