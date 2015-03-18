@@ -1030,7 +1030,9 @@ PP
         'storeconfigs' => 'true',
         'storeconfigs_backend' => 'puppetdb',
         'autosign' => 'true',
-        'manifest' => manifest_path
+      }
+      'main' => {
+        'environmentpath' => manifest_path,
       }} do
       #only some of the opts work on puppet_agent, acceptable exit codes does not
       agents.each{ |agent| on agent, puppet_agent("--test --server #{host}", { 'ENV' => env_vars }), :acceptable_exit_codes => [0,2] }
