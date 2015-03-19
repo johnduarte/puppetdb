@@ -564,18 +564,18 @@ EOS
   end
 
   def clear_database(host)
-    case PuppetDBExtensions.config[:database]
-      when :postgres
+    case options[:puppetdb_database]
+      when 'postgres'
         if host.is_pe?
           on host, 'su - pe-postgres -s "/bin/bash" -c "/opt/puppet/bin/dropdb pe-puppetdb"'
         else
           on host, 'su postgres -c "dropdb puppetdb"'
         end
         install_postgres(host)
-      when :embedded
+      when 'embedded'
         on host, "rm -rf #{puppetdb_sharedir(host)}/db/*"
       else
-        raise ArgumentError, "Unsupported database: '#{PuppetDBExtensions.config[:database]}'"
+        raise ArgumentError, "Unsupported database: '#{options[:puppetdb_database]}'"
     end
   end
 
@@ -1030,7 +1030,7 @@ PP
         'storeconfigs' => 'true',
         'storeconfigs_backend' => 'puppetdb',
         'autosign' => 'true',
-      }
+      },
       'main' => {
         'environmentpath' => manifest_path,
       }} do
