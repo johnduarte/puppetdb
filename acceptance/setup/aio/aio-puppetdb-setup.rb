@@ -116,8 +116,7 @@ on database, "chown -R puppetdb:puppetdb /etc/puppetdb"
 on database, "chown -R puppetdb:puppetdb /var/lib/puppetdb"
 
 step "Step 6: Start the PuppetDB Service (Why does docs use init.d syntax?)"
-on database, "service puppetdb start"
-sleep 20
+start_puppetdb(database)
 
 step "Enable puppetdb"
 on database, puppet("resource service puppetdb ensure=running enable=true")
@@ -160,9 +159,9 @@ step "Ensure correct ownership, see note for puppetdb.conf"
 on master, "chown -R puppet:puppet #{pupconfpath}"
 
 step "Step 4: Restart server on master"
+#TODO: write a start_puppetserver helper
 on master, "service puppetserver restart"
-
-sleep 10
+sleep 30
 
 step "Run puppet agent on hosts"
 hosts.each do |host|
