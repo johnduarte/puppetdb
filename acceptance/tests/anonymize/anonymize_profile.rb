@@ -22,7 +22,7 @@ test_name "anonymize tool - with profile anonymization" do
 
   step "export data from puppetdb" do
     sleep_until_queue_empty(database)
-    on database, "#{sbin_loc}/puppetdb export --outfile #{export_file1}"
+    on database, "#{sbin_loc}/puppetdb export --host #{database} --port 8080 --outfile #{export_file1}"
     scp_from(database, export_file1, ".")
   end
 
@@ -38,12 +38,12 @@ test_name "anonymize tool - with profile anonymization" do
       end
 
       step "import data into puppetdb" do
-        on database, "#{sbin_loc}/puppetdb import --infile #{anon_file}"
+        on database, "#{sbin_loc}/puppetdb import  --host #{database} --port 8080 --infile #{anon_file}"
         sleep_until_queue_empty(database)
       end
 
       step "export data from puppetdb again" do
-        on database, "#{sbin_loc}/puppetdb export --outfile #{export_file2}"
+        on database, "#{sbin_loc}/puppetdb export  --host #{database} --port 8080 --outfile #{export_file2}"
         scp_from(database, export_file2, ".")
       end
 
