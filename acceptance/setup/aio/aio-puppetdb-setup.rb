@@ -55,57 +55,95 @@ step "On the master sign the cert for the db node"
 step "Rerun the agent on the db node"
 on database, puppet("agent -t")
 
+step "Install puppetdb from source see https://docs.puppetlabs.com/puppetdb/latest/install_from_source.html"
+
+step "Step 1, Install Prerequisites"
+  step "Facter installed as part of AIO above"
+  step "Install Java 1.7"
+    on database, "yum install -y java-1.7.0-openjdk unzip"
+  step "Leiningen will be installed in step 2 below"
+  step "Git installed above"
+
+step "Step 2, Option A: Install Leiningen"
+  on database, "curl --tlsv1 -Lk https://raw.github.com/technomancy/leiningen/stable/bin/lein -o /usr/local/bin/lein"
+  on database, "chmod +x /usr/local/bin/lein"
+
+
+step "Step 2, Option A: Install PuppetDB from source"
 step "Clone puppetdb to each box"
 hosts.each do |host|
   on host, "git clone git://github.com/puppetlabs/puppetdb.git"
-  on host, "cd puppetdb && git checkout stable && git remote add rbrw git://github.com/rbrw/puppetdb.git && git fetch rbrw && git merge rbrw/ticket/stable/pdb-1227-prefer-aio-path-in-ssl-setup"
+  on host, "cd puppetdb && git checkout stable"
+  # Docs needs to note that stable is needed for AIO
 end
 
-step "On DB node install puppetdb deps"
-on database, "yum install -y java-1.7.0-openjdk unzip"
-
-on database, "curl --tlsv1 -Lk https://raw.github.com/technomancy/leiningen/stable/bin/lein -o /usr/local/bin/lein"
-on database, "chmod +x /usr/local/bin/lein"
+# Required for AIO
+#step "Add puppetlabs binaries to the front of your paths on each box"
+#hosts.each do |host|
+#  on host, "echo PATH=\"/opt/puppetlabs/bin:/opt/puppetlabs/puppet/bin:$PATH\" >> ~/.bashrc"
+#end
 
 step "On DB node install puppetdb (step 1: bootstrap)"
-on database, "cd puppetdb && rake package:bootstrap"
+# rake has to be vendored rake /opt/puppetlabs/puppet/bin/rake
+# Facter has to be on path???
+if options['type'] == 'aio' then
+  rake="/opt/puppetlabs/puppet/bin/rake"
+else
+  rake="rake"
+end
+on database, "cd puppetdb && #{rake} package:bootstrap"
 
 step "On DB node install puppetdb (step 2: install)"
-on database, "cd puppetdb && LEIN_ROOT=true rake install"
+on database, "cd puppetdb && LEIN_ROOT=true #{rake} install"
 
-step "create a puppetdb user and group"
+step "create a puppetdb user and group MISSING FROM DOC"
 on database, "groupadd puppetdb"
 on database, "useradd puppetdb -g puppetdb"
 
-step "setup PuppetDB ssl dir"
+step "Step 3, Option A: Run the SSL Configuration Script"
 on database, "/usr/sbin/puppetdb ssl-setup"
 
-step "update the jetty.ini for pdb"
+step "Step 4: Configure HTTPS"
 on database, "echo 'host = #{database}'  >>  /etc/puppetdb/conf.d/jetty.ini"
 
+step "Step 5: Configure Database"
 step "Bump PuppetDB's memory usage to account for the embedded DB"
 on database, "sed -i 's/Xmx192m/Xmx1g/' /etc/sysconfig/puppetdb"
 
-step "Setup PuppetDB ownership correctly"
+step "Setup PuppetDB ownership correctly MISSING FROM DOC"
+# More restrictive method may be better. Check failed read/write.
 on database, "chown -R puppetdb:puppetdb /etc/puppetdb"
 on database, "chown -R puppetdb:puppetdb /var/lib/puppetdb"
-on database, "service puppetdb start"
 
+step "Step 6: Start the PuppetDB Service (Why does docs use init.d syntax?)"
+on database, "service puppetdb start"
 sleep 20
 
-step "Copy puppetdb bits into ruby path on master"
-on master, "cp -R puppetdb/puppet/lib/puppet/* /opt/puppetlabs/puppet/lib/ruby/vendor_ruby/puppet/"
+step "Enable puppetdb"
+on database, puppet("resource service puppetdb ensure=running enable=true")
 
-step "Add puppetdb storage to puppet.conf"
+step "Connect PuppetDB to master https://docs.puppetlabs.com/puppetdb/latest/connect_puppet_master.html"
+
+step "Step 1: Install Plugins: On Platforms Without Packages"
+step "Source code cloned above"
+
+step "Copy puppetdb bits into ruby path on master CORRECTION FOR DOCS"
+          # cp -R ext/master/lib/puppet /usr/lib/ruby/site_ruby/1.8/puppet
+on master, "cd puppetdb && cp -R puppet/lib/puppet/* /opt/puppetlabs/puppet/lib/ruby/vendor_ruby/puppet/"
+
+step "Step 2: Edit Config Files"
 pupconfpath = master.puppet['confdir']
-on master, "echo '  storeconfigs = true' >> #{pupconfpath}/puppet.conf"
-on master, "echo '  storeconfigs_backend = puppetdb' >> #{pupconfpath}/puppet.conf"
-on master, "echo '  reports = store,puppetdb' >> #{pupconfpath}/puppet.conf"
 
-step "Create puppetdb.conf file"
+step "Edit puppetdb.conf file, needs to be owned by 'puppet' user (e.g puppet or pe-puppet)"
+
 on master, "echo '[main]' >> #{pupconfpath}/puppetdb.conf"
 on master, "echo '  server = #{database}' >> #{pupconfpath}/puppetdb.conf"
 on master, "echo '  port = 8081' >> #{pupconfpath}/puppetdb.conf"
+
+step "Add puppetdb storage to puppet.conf"
+on master, "echo '  storeconfigs = true' >> #{pupconfpath}/puppet.conf"
+on master, "echo '  storeconfigs_backend = puppetdb' >> #{pupconfpath}/puppet.conf"
+on master, "echo '  reports = store,puppetdb' >> #{pupconfpath}/puppet.conf"
 
 step "Create routes.yaml"
 route_file = master.puppet('master')['route_file']
@@ -118,10 +156,10 @@ content = <<-EOS
 EOS
 create_remote_file(master, route_file, content)
 
-step "Ensure correct ownership"
+step "Ensure correct ownership, see note for puppetdb.conf"
 on master, "chown -R puppet:puppet #{pupconfpath}"
 
-step "Restart server on master"
+step "Step 4: Restart server on master"
 on master, "service puppetserver restart"
 
 sleep 10
