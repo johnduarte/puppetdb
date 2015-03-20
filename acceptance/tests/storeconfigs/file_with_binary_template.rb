@@ -23,28 +23,25 @@ file { "/tmp/myfile":
   EOF
 
   tmpdir = master.tmpdir('storeconfigs')
-  moduledir = master.tmpdir('storeconfigs-moduledir')
+  moduledir = File.join(tmpdir,'modules')
 
   test_module = File.join(test_config[:acceptance_data_dir], "storeconfigs", "file_with_binary_template", "modules", "foomodule")
 
   scp_to(master, test_module, moduledir)
 
-  manifest_file = File.join(tmpdir, 'site.pp')
+  manifest_file = File.join(tmpdir, 'manifests', 'site.pp')
+  on master, "mkdir #{File.join(tmpdir, 'manifests')}"
   create_remote_file(master, manifest_file, manifest)
 
   on master, "chmod -R +rX #{tmpdir}"
   on master, "chmod -R +rX #{moduledir}"
 
-  result = on master, "puppet master --configprint modulepath"
-  resmod = "#{result.stdout.strip}:#{moduledir}"
-
   with_puppet_running_on(master,
     'master' => {
       'autosign' => 'true',
-      'modulepath' => resmod
     },
     'main' => {
-      'environmentpath' => manifest_file,
+      'environmentpath' => tmpdir,
     }) do
     step "Run agent to submit catalog" do
       run_agent_on hosts, "--test --server #{master}", :acceptable_exit_codes => (0..4)
