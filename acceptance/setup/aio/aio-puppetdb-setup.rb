@@ -165,5 +165,6 @@ sleep 30
 
 step "Run puppet agent on hosts"
 hosts.each do |host|
+  on host, puppet("module install puppetlabs-inifile")
   on host, puppet("agent -t")
 end

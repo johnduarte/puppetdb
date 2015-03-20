@@ -41,8 +41,10 @@ file { "/tmp/myfile":
   with_puppet_running_on(master,
     'master' => {
       'autosign' => 'true',
-      'manifest' => manifest_file,
       'modulepath' => resmod
+    },
+    'main' => {
+      'environmentpath' => manifest_file,
     }) do
     step "Run agent to submit catalog" do
       run_agent_on hosts, "--test --server #{master}", :acceptable_exit_codes => (0..4)

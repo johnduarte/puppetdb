@@ -52,8 +52,11 @@ MANIFEST
   with_puppet_running_on master, {
     'master' => {
       'autosign' => 'true',
-      'manifest' => manifest_file
-    }} do
+    },
+    'main' => {
+      'environmentpath' => manifest_file,
+    }
+  } do
 
     step "Run exporter to populate the database" do
       run_agent_on exporter, "--test --server #{master}", :acceptable_exit_codes => [0,2]
