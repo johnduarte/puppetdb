@@ -1,6 +1,13 @@
 require 'json'
 
 test_name "facts should be available through facts terminus when using apply" do
+  hosts.each do |host|
+    pup_ver = on( host, "facter puppetversion").stdout.chomp
+    unless version_is_less(pup_ver, '4.0.0')
+      skip_test "FIXME: PDB-1342 this doesn't play nice with Puppet 4 yet. Delete this skip when fixed."
+    end
+  end
+
   create_remote_file(master, '/tmp/routes-apply.yaml', <<-EOS)
 apply:
   facts:
