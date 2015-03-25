@@ -1013,6 +1013,7 @@ EOS
       '#{testdir}/environments':;
       '#{testdir}/environments/production':;
       '#{testdir}/environments/production/manifests':;
+      '#{testdir}/environments/production/modules':;
     }
 PP
     create_remote_file(host, manifest_file, manifest)
