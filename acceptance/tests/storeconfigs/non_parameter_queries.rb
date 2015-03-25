@@ -64,21 +64,15 @@ class tag_uppercase_query {
 }
 MANIFEST
 
-  tmpdir = master.tmpdir('storeconfigs')
-
-  manifest_file = File.join(tmpdir, 'site.pp')
-
-  create_remote_file(master, manifest_file, manifest)
-
-  on master, "chmod -R +rX #{tmpdir}"
-
+  manifest_path = create_remote_site_pp(master, manifest)
   with_puppet_running_on master, {
     'master' => {
       'autosign' => 'true',
     },
     'main' => {
-      'environmentpath' => manifest_file,
+      'environmentpath' => manifest_path,
     }} do
+    bounce_service( master, master['puppetservice'], 10 )
 
     step "Run exporter to populate the database" do
       run_agent_on exporter, "--test --server #{master}", :acceptable_exit_codes => [0,2]
