@@ -19,7 +19,7 @@ if (test_config[:install_type] == :package)
       el_version = db_facts["operatingsystemmajrelease"]
       yum_repo_url = "#{test_config[:package_repo_url]}/repo_configs/rpm/pl-puppetdb-#{test_config[:git_ref]}-el-#{el_version}-x86_64.repo"
       yum_repo_file_path = "/etc/yum.repos.d/puppetlabs-prerelease.repo"
-      on database, "curl \"#{yum_repo_url}\" | #{sed_cmd} > #{yum_repo_file_path}"
+      on database, "curl \"#{yum_repo_url}\"  > #{yum_repo_file_path}"
 
       result = on database, "cat #{yum_repo_file_path}"
       Log.notify("Yum REPO DEFINITION:\n\n#{result.stdout}\n\n")
