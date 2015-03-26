@@ -60,6 +60,10 @@ step "Install rubygems and sqlite3 on master" do
       on master, "gem install sqlite3"
     when /^el-6/
       on master, "yum install -y rubygems ruby-sqlite3 rubygem-activerecord"
+    when /^el-7/
+      on master, "curl -O ftp://ftp.pbone.net/mirror/download.fedora.redhat.com/pub/fedora/epel/7/x86_64/r/rubygem-sqlite3-1.3.5-4.el7.x86_64.rpm"
+      on master, "rpm -ivh rubygem-sqlite3-1.3.5-4.el7.x86_64.rpm"
+      on master, "gem install activerecord -v 3.2.17 --no-ri --no-rdoc -V --backtrace"
     else
       # EL7 very much matches what Fedora 20 uses
       on master, "yum install -y rubygems rubygem-sqlite3"

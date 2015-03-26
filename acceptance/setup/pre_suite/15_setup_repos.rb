@@ -23,6 +23,10 @@ enabled=1
 gpgcheck=1
     REPO
 
+    host['platform'].with_version_codename =~ /^(fedora|el|centos)-(\d+)-(.+)$/
+    variant = (($1 == 'centos') ? 'el' : $1)
+    version = $2
+    unless version == '7'
     create_remote_file host, '/etc/yum.repos.d/epel.repo', <<-REPO
 [epel]
 name=Extra Packages for Enterprise Linux $releasever - $basearch
@@ -32,6 +36,7 @@ failovermethod=priority
 enabled=1
 gpgcheck=0
     REPO
+    end
   when :fedora
     create_remote_file host, '/etc/yum.repos.d/puppetlabs-dependencies.repo', <<-REPO.gsub(' '*8, '')
 [puppetlabs-dependencies]
