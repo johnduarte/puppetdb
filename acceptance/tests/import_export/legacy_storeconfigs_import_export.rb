@@ -16,9 +16,8 @@ test_name "storeconfigs export and import" do
     }
     MANIFEST
 
-    create_remote_file master, manifest_path, manifest
-    on master, "chmod ugo+r #{manifest_path}"
-    #on master, "mkdir -p #{db_path}"
+    manifest_path = create_remote_site_pp(master, manifest)
+
     on master, "chown puppet:puppet #{db_path}"
     on master, "chmod -R 777 #{db_path}"
   end
