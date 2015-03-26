@@ -2,6 +2,9 @@ test_name "storeconfigs export and import" do
 
   confine :except, :platform => 'ubuntu-10.04-amd64'
 
+  master_pup_ver = on(master, "facter puppetversion").stdout.chomp
+  skip_test "storeconfigs not supported in puppet >= 4.0" unless version_is_less(master_pup_ver, '4.0.0')
+
   skip_test "Skipping test for PE because sqlite3 isn't available" if master.is_pe?
 
   db_path = master.tmpfile('storeconfigs.sqlite3')
