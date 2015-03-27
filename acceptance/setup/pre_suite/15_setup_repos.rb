@@ -5,6 +5,10 @@ def initialize_repo_on_host(host, os)
     on host, "dpkg -i puppetlabs-release-$(lsb_release -sc).deb"
     on host, "apt-get update"
   when :redhat
+    if options[:type] == 'aio' then
+      on host, "curl -O http://nightlies.puppetlabs.com/puppet-agent-latest/repo_configs/rpm/pl-puppet-agent-latest-el-7-x86_64.repo && cp pl-puppet-agent-latest-el-7-x86_64.repo /etc/yum.repos.d/"
+      on host, "curl -O http://nightlies.puppetlabs.com/puppetserver-latest/repo_configs/rpm/pl-puppetserver-latest-el-7-x86_64.repo && cp pl-puppetserver-latest-el-7-x86_64.repo /etc/yum.repos.d/"
+    else
     create_remote_file host, '/etc/yum.repos.d/puppetlabs-dependencies.repo', <<-REPO.gsub(' '*8, '')
 [puppetlabs-dependencies]
 name=Puppet Labs Dependencies - $basearch
@@ -22,6 +26,7 @@ gpgkey=http://yum.puppetlabs.com/RPM-GPG-KEY-puppetlabs
 enabled=1
 gpgcheck=1
     REPO
+    end
 
     host['platform'].with_version_codename =~ /^(fedora|el|centos)-(\d+)-(.+)$/
     variant = (($1 == 'centos') ? 'el' : $1)

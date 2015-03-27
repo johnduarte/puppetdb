@@ -11,6 +11,9 @@ test_name "Install Puppet" do
 
   master_facts = facts(master.name)
 
+  if options[:type] == 'aio' then
+    on master, "service puppetserver start"
+  else
   with_puppet_running_on(
     master,
     :master => {:dns_alt_names => "puppet,#{master_facts['hostname']},#{master_facts['fqdn']}",
@@ -19,5 +22,6 @@ test_name "Install Puppet" do
     step "PID file created?" do
       on master, "[ -f #{pidfile} ]"
     end
+  end
   end
 end

@@ -867,7 +867,12 @@ EOS
       when :fedora
         on host, "yum install -y puppet-3.7.3"
       when :redhat
+        if options[:type] == 'aio' then
+        on host, "yum install -y puppet-agent"
+        on host, "yum install -y puppetserver"
+        else
         on host, "yum install -y puppet"
+        end
       else
         raise ArgumentError, "Unsupported OS '#{os}'"
       end
